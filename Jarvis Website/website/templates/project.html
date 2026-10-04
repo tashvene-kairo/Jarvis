@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% block title %}{{ project.project_name if project else 'New Project' }}{% endblock %}
+{% block content %}
+<main class="project-detail-page">
+  <a class="text-button" href="{{ url_for('views.home') }}">← Back to Home</a>
+  {% if not project %}
+  <form id="projectSetupForm" class="project-detail-form project-setup-form" method="POST" action="{{ url_for('views.new_project') }}" autocomplete="off">
+    <span class="eyebrow">Project setup</span>
+    <h1>New project</h1>
+    <p class="project-detail-intro">Project and Organization details.</p>
+    <h2>Project</h2>
+    <label>Project name *<input name="project_name" required placeholder="Enter project name" autocomplete="off" value="{{ form_data.get('project_name', '') if form_data else '' }}"></label>
+    <label>Project Site / Location<textarea name="project_site" rows="3" placeholder="Enter project site / location">{{ form_data.get('project_site', '') if form_data else '' }}</textarea></label>
+    <label>Description<textarea name="project_description" rows="3" placeholder="Describe the project">{{ form_data.get('project_description', '') if form_data else '' }}</textarea></label>
+    <label>Purchase Order / Contract Date<input name="purchase_order_date" type="date" value="{{ form_data.get('purchase_order_date', '') if form_data else '' }}"></label>
+    <label>Created by<input value="{{ current_user.first_name }} {{ current_user.last_name }}" readonly></label>
+    <label>Project status<select name="project_status">{% for status in ['Active', 'Planning', 'Completed', 'Design', 'Cancelled', 'Deferred'] %}<option value="{{ status }}" {% if form_data and form_data.get('project_status', 'Active') == status %}selected{% endif %}>{{ status }}</option>{% endfor %}</select></label>
+    <h2>Company</h2>
+    <div class="form-grid"><label>Company name<input name="company_name" value="{{ company.company_name }}" readonly></label><label>Company email<input name="company_email" type="email" value="{{ company.company_email or '' }}" readonly></label></div>
+    <div class="form-grid"><label>Company reg no<input name="company_reg_no" value="{{ company.company_reg_no }}" readonly></label><label>Company phone no<input name="company_phone_number" value="{{ company.company_phone_number or '' }}" readonly></label></div>
+    <label>Website<input name="company_website" value="{{ company.website or '' }}" readonly></label><label>Address<input name="company_address" value="{{ company.address or '' }}" readonly></label><label>Other details<textarea name="company_description" rows="2" readonly>{{ company.description or '' }}</textarea></label>
+    <h2>Client</h2>
+    <section class="project-client-option">
+      <h3>Pre-existing client</h3>
+      <p>Fill in a client already registered with your organisation.</p>
+      <input type="hidden" name="existing_client_id" id="existingClientId" value="{{ form_data.get('existing_client_id', '') if form_data else '' }}">
+      <div class="client-search">
+        <label for="existingClientSearch">Client name</label>
+        <input id="existingClientSearch" type="search" placeholder="Search by client name" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="existingClientOptions" aria-expanded="false">
+        <div id="existingClientOptions" class="client-search-options" role="listbox" hidden>
+          {% for stakeholder in clients %}
+          <button type="button" class="client-search-option" role="option" aria-selected="false" id="existing-client-{{ stakeholder.client_id }}" data-client-id="{{ stakeholder.client_id }}" data-name="{{ stakeholder.client_name }}" data-reg-no="{{ stakeholder.client_reg_no }}" data-email="{{ stakeholder.client_email or '' }}" data-phone="{{ stakeholder.client_phone_number or '' }}" data-address="{{ stakeholder.client_address or '' }}">{{ stakeholder.client_name }}</button>
+          {% endfor %}
+          <p class="client-search-empty" hidden>No matching clients found in your organisation. Register a new client below if needed.</p>
+        </div>
+      </div>
+      <button class="text-button" type="button" data-clear-existing-client hidden>Clear selection</button>
+      <div class="form-grid existing-client-details" aria-label="Selected client details">
+        <label>Client reg no<input data-existing-client-field="regNo" readonly></label>
+        <label>Client email<input data-existing-client-field="email" type="email" readonly></label>
+        <label>Client phone<input data-existing-client-field="phone" readonly></label>
+        <label>Client address<input data-existing-client-field="address" readonly></label>
+      </div>
+    </section>
+    <section class="project-client-option">
+      <h3>Register a new client</h3>
+      <p>Fill in the details for a new client that is not already registered with your organisation.</p>
+      <div class="form-grid"><label>Client name<input name="client_name" value="{{ form_data.get('client_name', '') if form_data else '' }}"></label><label>Client reg no<input name="client_reg_no" value="{{ form_data.get('client_reg_no', '') if form_data else '' }}"></label></div>
+      <div class="form-grid"><label>Client email<input name="client_email" type="email" value="{{ form_data.get('client_email', '') if form_data else '' }}"></label><label>Client phone<input name="client_phone_number" value="{{ form_data.get('client_phone_number', '') if form_data else '' }}"></label></div>
+      <label>Client address<input name="client_address" value="{{ form_data.get('client_address', '') if form_data else '' }}"></label>
+    </section>
+    <h2>Sub Contractor</h2>
+    <div id="contractors">
+      {% for contractor_row in contractor_rows %}
+      <div class="repeatable-party contractor-party{% if not loop.first %} is-added{% endif %}">
+        <input type="hidden" name="existing_contractor_id" class="existing-contractor-id" value="{{ contractor_row.existing_contractor_id }}">
+        <section class="project-client-option">
+          <h3>Pre-existing Sub Contractor / Vendor</h3>
+          <p>Search and select a contractor or vendor registered in your organisation.</p>
+          <div class="contractor-search">
+            <label>Contractor / Vendor name</label>
+            <input class="contractor-search-input" type="search" value="{{ contractor_row.existing_contractor_name }}" placeholder="Search by contractor / vendor name" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false">
+            <div class="client-search-options contractor-search-options" role="listbox" hidden>
+              {% for stakeholder in contractors %}
+              <button type="button" class="client-search-option contractor-search-option" role="option" aria-selected="{% if contractor_row.existing_contractor_id|string == stakeholder.contractor_id|string %}true{% else %}false{% endif %}" data-contractor-id="{{ stakeholder.contractor_id }}" data-name="{{ stakeholder.contractor_name }}" data-reg-no="{{ stakeholder.contractor_reg_no }}" data-email="{{ stakeholder.contractor_email or '' }}" data-phone="{{ stakeholder.contractor_phone_number or '' }}" data-address="{{ stakeholder.contractor_address or '' }}">{{ stakeholder.contractor_name }}</button>
+              {% endfor %}
+              <p class="client-search-empty" hidden>No matching contractors or vendors found. Register a new one below if needed.</p>
+            </div>
+          </div>
+          <button class="text-button clear-contractor-selection" type="button" {% if not contractor_row.existing_contractor_id %}hidden{% endif %}>Clear selection</button>
+          <div class="form-grid existing-client-details">
+            <label>Registration no<input data-existing-contractor-field="regNo" value="{{ contractor_row.existing_contractor_reg_no }}" readonly></label>
+            <label>Email<input data-existing-contractor-field="email" type="email" value="{{ contractor_row.existing_contractor_email }}" readonly></label>
+            <label>Phone<input data-existing-contractor-field="phone" value="{{ contractor_row.existing_contractor_phone }}" readonly></label>
+            <label>Address<input data-existing-contractor-field="address" value="{{ contractor_row.existing_contractor_address }}" readonly></label>
+          </div>
+        </section>
+        <section class="project-client-option">
+          <h3>Register a new Sub Contractor / Vendor</h3>
+          <p>Fill in the details for a new contractor or vendor not already registered in your organisation.</p>
+          <div class="form-grid"><label>Contractor / Vendor name<input name="contractor_name" value="{{ contractor_row.name }}"></label><label>Registration no<input name="contractor_reg_no" value="{{ contractor_row.reg_no }}"></label></div>
+          <div class="form-grid"><label>Email<input name="contractor_email" type="email" value="{{ contractor_row.email }}"></label><label>Phone<input name="contractor_phone_number" value="{{ contractor_row.phone }}"></label></div>
+          <label>Address<input name="contractor_address" value="{{ contractor_row.address }}"></label>
+        </section>
+        {% if not loop.first %}
+        <button class="secondary-button cancel-contractor-party" type="button">Cancel</button>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    <button class="secondary-button add-party" type="button" data-target="contractors" data-label="Sub Contractor">＋ Add Sub Contractor</button>
+    <h2>Consultant</h2>
+    <div id="consultants"><div class="repeatable-party consultant-party">
+      <input type="hidden" name="existing_consultant_id" class="existing-consultant-id" value="{{ selected_consultant.consultant_id if selected_consultant else '' }}">
+      <section class="project-client-option">
+        <h3>Pre-existing Consultant</h3>
+        <p>Select a consultant already registered with your organisation.</p>
+        <div class="consultant-search">
+        <label for="existingConsultantSearch">Consultant name</label>
+        <input id="existingConsultantSearch" class="consultant-search-input" type="search" placeholder="Search by consultant name" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="existingConsultantOptions" aria-expanded="false" value="{{ selected_consultant.consultant_name if selected_consultant else '' }}">
+        <div id="existingConsultantOptions" class="client-search-options consultant-search-options" role="listbox" hidden>
+          {% for stakeholder in consultants %}
+          <button type="button" class="client-search-option consultant-search-option" role="option" aria-selected="{% if selected_consultant and selected_consultant.consultant_id == stakeholder.consultant_id %}true{% else %}false{% endif %}" data-consultant-id="{{ stakeholder.consultant_id }}" data-name="{{ stakeholder.consultant_name }}" data-reg-no="{{ stakeholder.consultant_reg_no }}" data-email="{{ stakeholder.consultant_email or '' }}" data-phone="{{ stakeholder.consultant_phone_number or '' }}" data-address="{{ stakeholder.consultant_address or '' }}">{{ stakeholder.consultant_name }}</button>
+          {% endfor %}
+          <p class="client-search-empty" hidden>No matching consultants found in your organisation.</p>
+        </div>
+        </div>
+      <button class="text-button clear-consultant-selection" type="button" {% if not selected_consultant %}hidden{% endif %}>Clear selection</button>
+      <div class="form-grid existing-client-details">
+        <label>Reg no<input data-existing-consultant-field="regNo" value="{{ selected_consultant.consultant_reg_no if selected_consultant else '' }}" readonly></label>
+        <label>Email<input data-existing-consultant-field="email" type="email" value="{{ selected_consultant.consultant_email or '' if selected_consultant else '' }}" readonly></label>
+        <label>Phone<input data-existing-consultant-field="phone" value="{{ selected_consultant.consultant_phone_number or '' if selected_consultant else '' }}" readonly></label>
+        <label>Address<input data-existing-consultant-field="address" value="{{ selected_consultant.consultant_address or '' if selected_consultant else '' }}" readonly></label>
+      </div>
+      </section>
+      <section class="project-client-option">
+        <h3>Register a new consultant</h3>
+        <p>Enter details here if this consultant is not already registered with your organisation.</p>
+        <div class="form-grid"><label>Consultant name<input name="consultant_name" value="{{ form_data.get('consultant_name', '') if form_data and not selected_consultant else '' }}"></label><label>Reg no<input name="consultant_reg_no" value="{{ form_data.get('consultant_reg_no', '') if form_data and not selected_consultant else '' }}"></label></div>
+        <div class="form-grid"><label>Email<input name="consultant_email" type="email" value="{{ form_data.get('consultant_email', '') if form_data and not selected_consultant else '' }}"></label><label>Phone<input name="consultant_phone_number" value="{{ form_data.get('consultant_phone_number', '') if form_data and not selected_consultant else '' }}"></label></div>
+        <label>Address<input name="consultant_address" value="{{ form_data.get('consultant_address', '') if form_data and not selected_consultant else '' }}"></label>
+      </section>
+    </div></div>
+    <button class="secondary-button add-party" type="button" data-target="consultants" data-label="Consultant">＋ Add consultant</button>
+    <button class="primary-button" type="submit">Save project</button>
+  </form>
+  {% else %}
+  <form class="project-detail-form project-edit-form" method="POST" action="{{ url_for('views.update_project_page', project_id=project.project_id) }}">
+    <span class="eyebrow">Project details</span>
+    <p class="edit-stakeholder-note">Please refer to your admin to modify pre-existing stakeholders information.</p>
+    <div class="project-detail-heading"><div><h1>{{ project.project_name }} - PRJ{{ project.Issued_Date.strftime('%m%Y') }}-{{ '%02d'|format(project.project_id) }}</h1></div><div class="project-revision-date"><span>Issued: {{ project.Issued_Date.strftime('%d %B %Y, %H:%M %Z') if project.Issued_Date else 'N/A' }}</span><span>Last saved: {{ last_saved_date.strftime('%d %B %Y, %H:%M %Z') if last_saved_date else 'N/A' }}</span></div></div>
+    <label>Project name<input name="name" value="{{ project.project_name }}" required></label>
+    <label>Project Site / Location<textarea name="project_site" rows="4" placeholder="Enter project site / location">{{ project.project_site or '' }}</textarea></label>
+    <label>Purchase Order / Contract Date<input name="purchase_order_date" type="date" value="{{ project.PurchaseOrder_date.isoformat() if project.PurchaseOrder_date else '' }}"></label>
+    <label>Status<select name="status">{% for status in ['Active', 'Planning', 'Completed', 'Design', 'Cancelled', 'Deferred'] %}<option value="{{ status }}" {% if project.Project_Status == status %}selected{% endif %}>{{ status }}</option>{% endfor %}</select></label>
+    <label>Description<textarea name="description" rows="4">{{ project.description or '' }}</textarea></label>
+    <h2>Company</h2>
+    <div class="form-grid"><label>Company name<input class="company-readonly" value="{{ project.company.company_name }}" readonly></label><label>Company reg no<input class="company-readonly" value="{{ project.company.company_reg_no }}" readonly></label></div>
+    <div class="form-grid"><label>Company email<input class="company-readonly" value="{{ project.company.company_email or '' }}" readonly></label><label>Company phone<input class="company-readonly" value="{{ project.company.company_phone_number or '' }}" readonly></label></div>
+    <label>Website<input class="company-readonly" value="{{ project.company.website or '' }}" readonly></label><label>Address<input class="company-readonly" value="{{ project.company.address or '' }}" readonly></label><label>Other details<textarea class="company-readonly" rows="2" readonly>{{ project.company.description or '' }}</textarea></label>
+    <h2>Client</h2>
+    <div id="editClients">
+      {% for row in edit_client_rows %}
+      <div class="repeatable-party edit-stakeholder-party edit-client-party{% if not loop.first %} is-added{% endif %}" data-kind="client" data-original-id="{{ row.client_id if row else '' }}">
+        <input type="hidden" name="existing_client_id" class="existing-stakeholder-id" value="{{ row.client_id if row else '' }}">
+        <section class="project-client-option edit-stakeholder-summary">
+          <h3>{{ row.client_name if row else '' }}</h3>
+          {% if row %}<div class="form-grid"><label>Reg no<input value="{{ row.client_reg_no }}" readonly></label><label>Email<input value="{{ row.client_email or '' }}" readonly></label><label>Phone<input value="{{ row.client_phone_number or '' }}" readonly></label><label>Address<input value="{{ row.client_address or '' }}" readonly></label></div>{% endif %}
+          <button class="secondary-button edit-stakeholder-button" type="button">Edit client</button>
+        </section>
+        <div class="edit-stakeholder-editor" hidden>
+          <section class="project-client-option">
+            <h3>Pre-existing client</h3><p>Select a client already registered with your organisation.</p>
+            <div class="edit-stakeholder-search"><label>Client name</label><input class="edit-stakeholder-search-input" type="search" value="{{ row.client_name if row else '' }}" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"><div class="client-search-options edit-stakeholder-options" role="listbox" hidden>
+              {% for stakeholder in edit_clients %}<button type="button" class="client-search-option edit-stakeholder-option" role="option" data-id="{{ stakeholder.client_id }}" data-name="{{ stakeholder.client_name }}" data-reg-no="{{ stakeholder.client_reg_no }}" data-email="{{ stakeholder.client_email or '' }}" data-phone="{{ stakeholder.client_phone_number or '' }}" data-address="{{ stakeholder.client_address or '' }}" aria-selected="{{ 'true' if row and row.client_id == stakeholder.client_id else 'false' }}">{{ stakeholder.client_name }}</button>{% endfor %}
+              <p class="client-search-empty" hidden>No matching clients found in your organisation.</p>
+            </div></div>
+            <button class="text-button clear-edit-stakeholder" type="button" {% if not row %}hidden{% endif %}>Clear selection</button>
+            <div class="form-grid existing-client-details"><label>Reg no<input data-existing-field="regNo" value="{{ row.client_reg_no if row else '' }}" readonly></label><label>Email<input data-existing-field="email" value="{{ row.client_email or '' if row else '' }}" readonly></label><label>Phone<input data-existing-field="phone" value="{{ row.client_phone_number or '' if row else '' }}" readonly></label><label>Address<input data-existing-field="address" value="{{ row.client_address or '' if row else '' }}" readonly></label></div>
+          </section>
+          <section class="project-client-option"><h3>Register a new client</h3><p>Fill in the details for a client not yet registered with your organisation.</p>
+            <div class="form-grid"><label>Client name<input name="client_name" value=""></label><label>Reg no<input name="client_reg_no" value=""></label></div><div class="form-grid"><label>Email<input name="client_email" value=""></label><label>Phone<input name="client_phone_number" value=""></label></div><label>Address<input name="client_address" value=""></label>
+          </section>
+          <button class="secondary-button cancel-edit-stakeholder" type="button">Cancel</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <h2>Sub Contractor / Vendor</h2>
+    <div id="editContractors">
+      {% for row in edit_contractor_rows %}
+      <div class="repeatable-party edit-stakeholder-party edit-contractor-party{% if not loop.first %} is-added{% endif %}" data-kind="contractor" data-original-id="{{ row.contractor_id if row else '' }}">
+        <input type="hidden" name="existing_contractor_id" class="existing-stakeholder-id" value="{{ row.contractor_id if row else '' }}">
+        <section class="project-client-option edit-stakeholder-summary">
+          <h3>{{ row.contractor_name if row else '' }}</h3>
+          {% if row %}<div class="form-grid"><label>Reg no<input value="{{ row.contractor_reg_no }}" readonly></label><label>Email<input value="{{ row.contractor_email or '' }}" readonly></label><label>Phone<input value="{{ row.contractor_phone_number or '' }}" readonly></label><label>Address<input value="{{ row.contractor_address or '' }}" readonly></label></div>{% endif %}
+          <button class="secondary-button edit-stakeholder-button" type="button">Edit sub contractor / vendor</button>
+        </section>
+        <div class="edit-stakeholder-editor" hidden>
+          <section class="project-client-option"><h3>Pre-existing Sub Contractor / Vendor</h3><p>Select a registered sub contractor or vendor from your organisation.</p>
+            <div class="edit-stakeholder-search"><label>Sub Contractor / Vendor name</label><input class="edit-stakeholder-search-input" type="search" value="{{ row.contractor_name if row else '' }}" placeholder="Search by contractor / vendor name" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"><div class="client-search-options edit-stakeholder-options" role="listbox" hidden>
+              {% for stakeholder in edit_contractors %}<button type="button" class="client-search-option edit-stakeholder-option" role="option" data-id="{{ stakeholder.contractor_id }}" data-name="{{ stakeholder.contractor_name }}" data-reg-no="{{ stakeholder.contractor_reg_no }}" data-email="{{ stakeholder.contractor_email or '' }}" data-phone="{{ stakeholder.contractor_phone_number or '' }}" data-address="{{ stakeholder.contractor_address or '' }}" aria-selected="{{ 'true' if row and row.contractor_id == stakeholder.contractor_id else 'false' }}">{{ stakeholder.contractor_name }}</button>{% endfor %}
+              <p class="client-search-empty" hidden>No matching contractors or vendors found.</p>
+            </div></div>
+            <button class="text-button clear-edit-stakeholder" type="button" {% if not row %}hidden{% endif %}>Clear selection</button>
+            <div class="form-grid existing-client-details"><label>Reg no<input data-existing-field="regNo" value="{{ row.contractor_reg_no if row else '' }}" readonly></label><label>Email<input data-existing-field="email" value="{{ row.contractor_email or '' if row else '' }}" readonly></label><label>Phone<input data-existing-field="phone" value="{{ row.contractor_phone_number or '' if row else '' }}" readonly></label><label>Address<input data-existing-field="address" value="{{ row.contractor_address or '' if row else '' }}" readonly></label></div>
+          </section>
+          <section class="project-client-option"><h3>Register a new Sub Contractor / Vendor</h3><p>Fill in the details for a new sub contractor or vendor.</p>
+            <div class="form-grid"><label>Name<input name="contractor_name" value=""></label><label>Reg no<input name="contractor_reg_no" value=""></label></div><div class="form-grid"><label>Email<input name="contractor_email" value=""></label><label>Phone<input name="contractor_phone_number" value=""></label></div><label>Address<input name="contractor_address" value=""></label>
+          </section>
+          <button class="secondary-button cancel-edit-stakeholder" type="button">Cancel</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <button class="secondary-button add-edit-stakeholder" type="button" data-target="editContractors" data-kind="contractor" data-label="Sub Contractor / Vendor">＋ Add Sub Contractor / Vendor</button>
+    <h2>Consultant</h2>
+    <div id="editConsultants">
+      {% for row in edit_consultant_rows %}
+      <div class="repeatable-party edit-stakeholder-party edit-consultant-party{% if not loop.first %} is-added{% endif %}" data-kind="consultant" data-original-id="{{ row.consultant_id if row else '' }}">
+        <input type="hidden" name="existing_consultant_id" class="existing-stakeholder-id" value="{{ row.consultant_id if row else '' }}">
+        <section class="project-client-option edit-stakeholder-summary">
+          <h3>{{ row.consultant_name if row else '' }}</h3>
+          {% if row %}<div class="form-grid"><label>Reg no<input value="{{ row.consultant_reg_no }}" readonly></label><label>Email<input value="{{ row.consultant_email or '' }}" readonly></label><label>Phone<input value="{{ row.consultant_phone_number or '' }}" readonly></label><label>Address<input value="{{ row.consultant_address or '' }}" readonly></label></div>{% endif %}
+          <button class="secondary-button edit-stakeholder-button" type="button">Edit consultant</button>
+        </section>
+        <div class="edit-stakeholder-editor" hidden>
+          <section class="project-client-option"><h3>Pre-existing Consultant</h3><p>Select a consultant already registered with your organisation.</p>
+            <div class="edit-stakeholder-search"><label>Consultant name</label><input class="edit-stakeholder-search-input" type="search" value="{{ row.consultant_name if row else '' }}" placeholder="Search by consultant name" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"><div class="client-search-options edit-stakeholder-options" role="listbox" hidden>
+              {% for stakeholder in edit_consultants %}<button type="button" class="client-search-option edit-stakeholder-option" role="option" data-id="{{ stakeholder.consultant_id }}" data-name="{{ stakeholder.consultant_name }}" data-reg-no="{{ stakeholder.consultant_reg_no }}" data-email="{{ stakeholder.consultant_email or '' }}" data-phone="{{ stakeholder.consultant_phone_number or '' }}" data-address="{{ stakeholder.consultant_address or '' }}" aria-selected="{{ 'true' if row and row.consultant_id == stakeholder.consultant_id else 'false' }}">{{ stakeholder.consultant_name }}</button>{% endfor %}
+              <p class="client-search-empty" hidden>No matching consultants found.</p>
+            </div></div>
+            <button class="text-button clear-edit-stakeholder" type="button" {% if not row %}hidden{% endif %}>Clear selection</button>
+            <div class="form-grid existing-client-details"><label>Reg no<input data-existing-field="regNo" value="{{ row.consultant_reg_no if row else '' }}" readonly></label><label>Email<input data-existing-field="email" value="{{ row.consultant_email or '' if row else '' }}" readonly></label><label>Phone<input data-existing-field="phone" value="{{ row.consultant_phone_number or '' if row else '' }}" readonly></label><label>Address<input data-existing-field="address" value="{{ row.consultant_address or '' if row else '' }}" readonly></label></div>
+          </section>
+          <section class="project-client-option"><h3>Register a new Consultant</h3><p>Fill in the details for a new consultant.</p>
+            <div class="form-grid"><label>Name<input name="consultant_name" value=""></label><label>Reg no<input name="consultant_reg_no" value=""></label></div><div class="form-grid"><label>Email<input name="consultant_email" value=""></label><label>Phone<input name="consultant_phone_number" value=""></label></div><label>Address<input name="consultant_address" value=""></label>
+          </section>
+          <button class="secondary-button cancel-edit-stakeholder" type="button">Cancel</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <button class="secondary-button add-edit-stakeholder" type="button" data-target="editConsultants" data-kind="consultant" data-label="Consultant">＋ Add Consultant</button>
+    <button class="primary-button" type="submit">Save project</button>
+    <button class="secondary-button cancel-project-edit" type="button" data-fallback-url="{{ url_for('views.home') }}">Cancel</button>
+  </form>
+  {% endif %}
+</main>
+{% if not project %}<script src="{{ url_for('static', filename='project-stakeholders.js') }}"></script>{% else %}<script src="{{ url_for('static', filename='project-edit.js') }}"></script>{% endif %}
+{% endblock %}

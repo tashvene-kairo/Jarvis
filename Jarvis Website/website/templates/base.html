@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f4f0e8">
+    <meta name="description" content="Jarvis AI-Powered Project Assistant">
+    <title>Jarvis - AI-Powered Project Assistant</title>
+
+    {# Add login-page stylesheets here from a child template. #}
+    {% block extra_head %}
+        <link rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+      integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh"
+      crossorigin="anonymous"
+    />
+     <link rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
+      crossorigin="anonymous"
+    />
+    {% endblock %}
+
+
+    <title>{% block title %}Home {% endblock %}</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-container" aria-live="polite">
+                {% for category, message in messages %}
+                {% if category == 'error' %}
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                {% elif category == 'success' %}
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div> 
+                {% endif %} 
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+
+    {% if request.path not in ['/login', '/signup', '/forgot-password'] and not request.path.startswith('/reset-password/') and not request.path.startswith('/project/') and not request.path.startswith('/meeting/') %}
+    <div class="app-shell" id="appShell">
+        <aside class="sidebar" aria-label="Primary navigation">
+            <a class="brand" href="#dashboard" data-view-link="dashboard">
+                <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+                <span><strong>JARVIS</strong><small>Project intelligence</small></span>
+            </a>
+            <nav class="nav-list">
+                <button class="nav-item is-active" data-view="dashboard"><span>⌂</span> Home</button>
+                <button class="nav-item project-parent" id="projectsNavToggle" data-view="projects" type="button" aria-expanded="true"><span>▦</span> Projects <b>⌄</b></button>
+                <div class="nav-submenu" id="projectSubmenu"><button class="nav-item nav-subitem" data-view="meetings"><span>◷</span> Meetings</button></div>
+                <button class="nav-item" data-view="organization"><span>▤</span> Organisation</button>
+                <button class="nav-item" data-view="account"><span>◉</span> Account</button>
+                <button class="nav-item" data-view="documents"><span>▤</span> Documents</button>
+                <button class="nav-item" data-view="chat"><span>✦</span> AI agent chat</button>
+                <button class="nav-item" data-view="reports"><span>▥</span> Reports</button>
+                <button class="nav-item" data-view="settings"><span>⚙</span> Settings</button>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="avatar">{{ first_name[:1]|upper }}</div><div><strong>{{ first_name }}</strong><small>{{ user_role }}</small></div>
+            </div>
+        </aside>
+
+        <main class="workspace">
+            <header class="topbar">
+                <div class="topbar-title"><button class="mobile-menu" id="mobileMenu" aria-label="Open menu">☰</button><h1 id="pageTitle">Home</h1></div>
+                <div class="topbar-actions"><a class="logout-button" href="{{ url_for('auth.logout') }}">Logout</a></div>
+            </header>
+
+            <div class="content">
+                <section class="view is-active" data-view-panel="dashboard">
+                    <div class="welcome-row"><div><span class="eyebrow">{{ current_date }} · {{ timezone }}</span><h2>{{ greeting }}, {{ first_name }}</h2><p>Here is what is happening across your projects today.</p></div></div>
+                    <div class="dashboard-projects">
+                        <div class="page-head"><div><span class="eyebrow">Portfolio</span><h2>Projects</h2></div></div>
+                        <div class="filter-bar"><label class="search inline"><span>⌕</span><input id="dashboardProjectSearch" name="dashboard_project_search" type="search" autocomplete="new-password" readonly placeholder="Search projects..."></label><select id="dashboardProjectFilter" aria-label="Filter dashboard projects"><option value="all">All statuses</option><option value="progress">In progress</option><option value="planning">Planning</option></select><div class="dashboard-project-actions"><a class="primary-button" href="{{ url_for('views.new_project') }}">＋ Create project</a><a class="primary-button" href="{{ url_for('views.new_meeting') }}">＋ Create meeting</a></div></div>
+                        <div class="project-card-grid" id="dashboardProjectGrid"></div>
+                    </div>
+                    <div class="dashboard-grid meetings-only">
+                        <article class="panel"><div class="panel-heading"><h3>Recent Meetings</h3></div><div class="meeting-list" id="upcomingMeetings"></div></article>
+                    </div>
+                </section>
+
+                <section class="view" data-view-panel="projects"><div class="page-head"><div><span class="eyebrow">Portfolio</span><h2>Projects</h2><p>View projects, their latest meetings, and open action items.</p></div><div class="project-page-actions"><a class="primary-button" href="{{ url_for('views.new_project') }}">＋ Create project</a><a class="secondary-button" href="{{ url_for('views.new_meeting') }}">＋ Create meeting</a></div></div><div class="filter-bar"><label class="search inline"><span>⌕</span><input id="projectSearch" name="project_search" type="search" autocomplete="new-password" readonly placeholder="Search projects..."></label><select id="projectFilter" aria-label="Filter projects"><option value="all">All statuses</option><option value="progress">In progress</option><option value="planning">Planning</option><option value="completed">Completed</option><option value="deferred">Deferred</option><option value="cancelled">Cancelled</option></select></div><div id="projectDirectory"></div></section>
+
+                <section class="view" data-view-panel="meetings"><div class="page-head"><div><span class="eyebrow">Knowledge capture</span><h2>Meeting minutes</h2></div><div class="meeting-page-actions"><a class="secondary-button" href="{{ url_for('views.meeting_archive') }}">Meeting archive</a><a class="primary-button" href="{{ url_for('views.new_meeting') }}">＋ New meeting</a></div></div><div class="meeting-browser"><section class="meeting-preview-pane"><div class="meeting-preview-heading"><div><h3 id="meetingPreviewTitle">Select a meeting</h3><p id="meetingPreviewMetadata">Choose a meeting revision from the list to preview its minutes.</p></div><a class="secondary-button" id="meetingPreviewEdit" href="#" hidden>Edit meeting</a></div><div class="meeting-pdf-frame"><iframe id="meetingPreviewFrame" title="Meeting PDF preview" hidden></iframe><div class="meeting-preview-empty" id="meetingPreviewEmpty">Select a meeting revision to view its PDF.</div></div></section><aside class="meeting-directory-pane"><label class="search"><span>⌕</span><input id="meetingSearch" name="meeting_search" type="search" autocomplete="new-password" readonly placeholder="Search meetings..."></label><div class="meeting-list meeting-directory-list" id="meetingDirectory"></div></aside></div></section>
+
+                <section class="view" data-view-panel="organization"><div class="page-head"><div><span class="eyebrow">Workspace</span><h2>Organisation</h2></div></div><div class="organisation-layout"><section class="settings-card organisation-company"><div class="panel-heading"><h3>Company details</h3><small id="companyLastEdited" class="company-last-edited"></small></div><form id="companyForm" class="organisation-form"><div class="form-grid"><label>Company name<input name="company_name" required></label><label>Registration number<input name="company_reg_no" required></label><label>Email<input name="company_email" type="email"></label><label>Phone<input name="company_phone_number"></label><label>Address<input name="address"></label><label>Website<input name="website"></label></div><label>Other Details<textarea name="description" rows="3"></textarea></label><button class="secondary-button admin-only" id="changeCompanyPassword" type="button">Change company password</button><label class="admin-only company-password-editor" hidden>New company password<input name="company_password" type="password" minlength="7" placeholder=""></label><button class="primary-button admin-only" type="submit">Save company details</button></form></section><section class="settings-card organisation-team"><div class="panel-heading"><h3>Team</h3></div><h4>Active members</h4><div id="activeMembers" class="member-list"></div><h4 class="past-members-heading">Past members</h4><div id="inactiveMembers" class="member-list"></div><form id="memberForm" class="organisation-form admin-only"><h4>Add team member</h4><div class="form-grid"><label>Email<input name="email" type="email" required></label><label>Role<input name="role" value="Employee" required></label><label>First name<input name="first_name" required></label><label>Last name<input name="last_name"></label><label>Temporary password<input name="temporary_password" type="password" minlength="7" required></label></div><button class="primary-button" type="submit">Add team member</button></form></section></div></section>
+
+                <section class="view" data-view-panel="account"><div class="page-head"><div><span class="eyebrow">Profile</span><h2>Account</h2><p>Manage your account details and session.</p></div></div><section class="settings-card account-card"><form id="accountForm" class="organisation-form"><div class="form-grid"><label>Email<input name="email" readonly></label><label>Role<input name="role" readonly></label><label>Company name<input name="company_name" readonly></label><label>Employee ID<input name="employee_id" placeholder="Optional"></label><label>First name<input name="first_name" required></label><label>Last name<input name="last_name"></label><label>Phone<input name="phone_number"></label></div><div class="account-password-controls"><button class="secondary-button" id="changeAccountPassword" type="button">Change password</button><label class="account-password-editor" hidden>New password<input name="password" type="password" minlength="7" placeholder="Enter new password"></label><button class="text-button" id="saveAccountPassword" type="button" hidden>Save</button><button class="text-button" id="cancelAccountPassword" type="button" hidden>Cancel</button></div><button class="primary-button" type="submit">Save account</button></form></section></section>
+
+                <section class="view" data-view-panel="documents"><div class="page-head"><div><span class="eyebrow">Project library</span><h2>Documents</h2><p>All project files, meeting attachments, and generated reports in one place.</p></div><button class="primary-button" data-open-modal="meetingModal">Upload document</button></div><div class="document-grid" id="documentGrid"></div></section>
+
+                <section class="view" data-view-panel="chat"><div class="page-head"><div><span class="eyebrow">Project intelligence</span><h2>Ask your AI agent</h2><p>Answers are grounded in the project information available in this workspace.</p></div></div><div class="chat-page"><div class="chat-page-toolbar"><div class="chat-prompts"><button type="button" data-question="What's the latest action items pending?">Latest pending action items</button><button type="button" data-question="What is the status of all pending items?">Status of pending items</button><button type="button" data-question="Give me a summary of the latest meeting held.">Latest meeting summary</button></div><button class="secondary-button" id="downloadChatPage" type="button">Download chat</button></div><div class="chat-thread" id="chatMessages"><div class="agent-bubble chat-welcome"><p>What project would you like to enquire about? Please keep your enquiry within your company workspace.</p></div></div><form class="chat-form" id="chatForm"><textarea id="chatInput" rows="2" placeholder="Ask anything about your project..."></textarea><button class="send-button" aria-label="Send message">➤</button><select id="chatModel" aria-label="AI model"></select></form></div></section>
+
+                <section class="view" data-view-panel="reports"><div class="page-head"><div><span class="eyebrow">Insights</span><h2>Reports</h2><p>Ready-to-share summaries across delivery, risk, decisions, and activity.</p></div><button class="primary-button" data-toast="Report generation is ready for backend connection.">Generate report</button></div><div class="report-grid"><article class="report-card"><span>▥</span><small>Weekly</small><h3>Executive project summary</h3><p>Portfolio health, delivery changes, and decisions leadership needs to know.</p><button class="text-button" data-toast="Opening report preview...">Preview report →</button></article><article class="report-card"><span>✦</span><small>AI generated</small><h3>Decision & action register</h3><p>A concise roll-up of approvals, blockers, owners, and due dates.</p><button class="text-button" data-toast="Opening report preview...">Preview report →</button></article><article class="report-card"><span>◷</span><small>Monthly</small><h3>Meeting intelligence</h3><p>Attendance, themes, unresolved questions, and commitment trends.</p><button class="text-button" data-toast="Opening report preview...">Preview report →</button></article></div></section>
+
+                <section class="view" data-view-panel="settings"><div class="page-head"><div><span class="eyebrow">Preferences</span><h2>Settings</h2><p>Configure appearance and prototype behavior.</p></div></div><form class="settings-card" id="settingsForm"><label class="setting"><span><strong>Compact density</strong><small>Fit more project information on each screen.</small></span><input type="checkbox" id="densityToggle"><i></i></label><label class="setting"><span><strong>Assistant panel</strong><small>Keep the AI agent visible beside your workspace.</small></span><input type="checkbox" id="assistantToggle" checked><i></i></label><label class="setting"><span><strong>Email summaries</strong><small>Receive a weekly digest of project activity.</small></span><input type="checkbox" checked><i></i></label><button class="primary-button" type="submit">Save preferences</button></form></section>
+            </div>
+        </main>
+
+        <div class="assistant-entry" id="assistantEntry"><div class="assistant-greeting" id="assistantGreeting" hidden>Hi {{ first_name }}, how can I help you?</div><button class="assistant-toggle" id="assistantToggleButton" type="button" aria-label="Open AI chat" aria-expanded="false" title="Open AI chat"><span>AI</span></button></div>
+        <aside class="assistant-panel is-collapsed" id="assistantPanel"><header><div class="assistant-title"><span class="assistant-orb">✦</span><span><strong>AI Agent</strong><small><i></i> Online</small></span></div><div class="assistant-header-actions"><button class="icon-button" id="downloadAssistantChat" type="button" aria-label="Download chat">⇩</button><button class="icon-button" id="closeAssistantButton" type="button" aria-label="Minimize AI chat">−</button></div></header><div class="assistant-messages" id="assistantMessages"><time>Today</time><div class="agent-message"><span class="assistant-orb small">✦</span><div class="bubble agent-bubble"><p>What project would you like to enquire about? Please keep your enquiry within your company workspace.</p></div></div></div><div class="quick-prompts"><button data-question="What's the latest action items pending?">Latest pending action items</button><button data-question="What is the status of all pending items?">Pending item status</button><button data-question="Give me a summary of the latest meeting held.">Latest meeting summary</button></div><form class="assistant-form" id="assistantForm"><textarea id="assistantInput" rows="1" placeholder="Ask anything..."></textarea><button class="send-button" aria-label="Send message">➤</button><select id="assistantModel" aria-label="AI model"></select></form><p class="ai-disclaimer">AI can make mistakes. Verify important information.</p></aside>
+    </div>
+    {% endif %}
+
+    <div class="modal-backdrop" id="modalBackdrop" hidden></div>
+    <section class="modal" id="projectModal" hidden><div class="modal-header"><div><span class="eyebrow">New workspace</span><h2>Create new project</h2></div><button class="modal-close" data-close-modal aria-label="Close">×</button></div><form id="projectForm" class="modal-form"><label>Project name *<input id="newProjectName" required placeholder="Enter project name"></label><label>Project code <input placeholder="Optional"></label><label>Description <textarea id="newProjectDescription" rows="3" placeholder="Enter project description"></textarea></label><div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>Cancel</button><button class="primary-button">Create project</button></div></form></section>
+    <section class="modal" id="meetingModal" hidden><div class="modal-header"><div><span class="eyebrow">Knowledge capture</span><h2>New meeting minute</h2></div><button class="modal-close" data-close-modal aria-label="Close">×</button></div><form id="meetingForm" class="modal-form"><label>Meeting title *<input id="meetingTitle" required value="Weekly Progress Meeting"></label><label>Meeting date *<input type="date" required value="2025-05-08"></label><label>Project<select id="meetingProject" required></select></label><label class="dropzone">▧ <strong>Drop a source file or browse</strong><input type="file" hidden></label><div class="modal-actions"><button type="button" class="secondary-button" data-close-modal>Cancel</button><button class="primary-button">Save meeting</button></div></form></section>
+    <div class="toast" id="toast" role="status"></div>
+
+        <script
+            src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+            integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+            crossorigin="anonymous"
+        ></script>
+        <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
+            integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+            crossorigin="anonymous"
+        ></script>
+        <script
+            src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+            integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+            crossorigin="anonymous"
+        ></script>
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+</body>
+</html>

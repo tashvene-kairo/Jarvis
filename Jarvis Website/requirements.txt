@@ -1,0 +1,15 @@
+Flask
+Flask-Login
+Flask-SQLAlchemy
+psycopg2-binary
+reportlab
+python-dotenv
+pydantic
+langchain-anthropic
+langchain-google-genai
+langchain
+langchain-classic
+duckduckgo-search
+ddgs
+langchain-community
+wikipedia

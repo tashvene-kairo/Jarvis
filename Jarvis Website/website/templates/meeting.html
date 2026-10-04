@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% set is_new = meeting is none %}
+{% block title %}{{ 'New Meeting' if is_new else meeting.meeting_title }}{% endblock %}
+{% block content %}
+<main class="meeting-page">
+	<div class="meeting-top-actions"><a class="text-button" href="{{ url_for('views.meeting_details', meeting_id=meeting.meeting_id) if not is_new else url_for('views.home') }}">← {{ 'Back to preview' if not is_new else 'Back to Home' }}</a>{% if not is_new %}<div class="export-buttons"><a class="secondary-button" href="{{ url_for('views.export_meeting_pdf', meeting_id=meeting.meeting_id) }}">PDF</a></div>{% endif %}</div>
+	<form class="meeting-form" method="POST" action="{{ url_for('views.new_meeting') if is_new else url_for('views.save_meeting_revision', meeting_id=meeting.meeting_id) }}">
+		<div class="page-head"><div><span class="eyebrow">Meeting record</span><h1>{{ 'New meeting' if is_new else meeting.meeting_title ~ ' - MOM%04d'|format(meeting.meeting_id) }}</h1></div><div class="meeting-meta"><span>Issued: {{ meeting.date_Issued.strftime('%d %b %Y, %H:%M') if meeting and meeting.date_Issued else 'On creation' }}</span><span>Rev_{{ meeting.revision_No if meeting else 0 }}{% if meeting and meeting.rev_Date %} {{ meeting.rev_Date.strftime('%d %b %Y, %H:%M') }}{% endif %}</span></div></div>
+		<section class="meeting-section">
+			<h2>Project information</h2>
+			{% if is_new %}
+			<div class="meeting-project-search">
+				<label for="meetingProjectSearch">Project</label>
+				<input id="meetingProjectSearch" type="search" placeholder="Search projects..." autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="meetingProjectOptions" aria-expanded="false" required>
+				<div id="meetingProjectOptions" class="meeting-project-options" role="listbox" hidden>
+					{% for project in projects %}
+					<button type="button" class="meeting-project-option" role="option" aria-selected="false" data-project-id="{{ project.project_id }}" data-project-name="{{ project.project_name }}" data-site="{{ project.project_site or '' }}" data-company="{{ project.company.company_name if project.company else '' }}" data-client="{{ project.client.client_name if project.client else '' }}" data-contractor="{{ project.contractors|map(attribute='contractor_name')|join(', ') if project.contractors else (project.contractor.contractor_name if project.contractor else '') }}" data-consultant="{{ project.consultant.consultant_name if project.consultant else '' }}">{{ project.project_name }}</button>
+					{% endfor %}
+					<p class="meeting-project-empty" hidden>No matching projects found.</p>
+				</div>
+				<input type="hidden" name="project_id" id="meetingProjectId">
+			</div>
+			<select id="meetingProjectSelect" aria-hidden="true" tabindex="-1" hidden>
+				<option value=""></option>
+				{% for project in projects %}
+				<option value="{{ project.project_id }}" data-site="{{ project.project_site or '' }}" data-company="{{ project.company.company_name if project.company else '' }}" data-client="{{ project.client.client_name if project.client else '' }}" data-contractor="{{ project.contractors|map(attribute='contractor_name')|join(', ') if project.contractors else (project.contractor.contractor_name if project.contractor else '') }}" data-consultant="{{ project.consultant.consultant_name if project.consultant else '' }}">{{ project.project_name }}</option>
+				{% endfor %}
+			</select>
+			{% else %}
+			<label>Project<select name="project_id" id="meetingProjectSelect" disabled>
+				{% for project in projects %}
+				<option value="{{ project.project_id }}" data-site="{{ project.project_site or '' }}" data-company="{{ project.company.company_name if project.company else '' }}" data-client="{{ project.client.client_name if project.client else '' }}" data-contractor="{{ project.contractors|map(attribute='contractor_name')|join(', ') if project.contractors else (project.contractor.contractor_name if project.contractor else '') }}" data-consultant="{{ project.consultant.consultant_name if project.consultant else '' }}" {% if meeting and meeting.project_id == project.project_id %}selected{% endif %}>{{ project.project_name }}</option>
+				{% endfor %}
+			</select></label>
+			<input type="hidden" name="project_id" value="{{ meeting.project_id }}">
+			{% endif %}
+			<div class="form-grid">
+				<label>Project site / location<input id="meetingProjectSite" value="{{ meeting.project.project_site if meeting and meeting.project else '' }}" readonly></label>
+				<label>Company<input id="meetingCompany" value="{{ meeting.project.company.company_name if meeting and meeting.project and meeting.project.company else '' }}" readonly></label>
+				<label>Client<input id="meetingClient" value="{{ meeting.project.client.client_name if meeting and meeting.project and meeting.project.client else '' }}" readonly></label>
+				<label>Contractor<input id="meetingContractor" value="{{ (meeting.project.contractors|map(attribute='contractor_name')|join(', ') if meeting.project.contractors else (meeting.project.contractor.contractor_name if meeting.project.contractor else '')) if meeting and meeting.project else '' }}" readonly></label>
+				<label>Consultant<input id="meetingConsultant" value="{{ meeting.project.consultant.consultant_name if meeting and meeting.project and meeting.project.consultant else '' }}" readonly></label>
+				<label>Revision number<input value="Rev_{{ meeting.revision_No if meeting else 0 }}" readonly></label>
+			</div>
+		</section>
+		<section class="meeting-section"><div class="section-heading"><h2>Participants</h2><button class="secondary-button" type="button" id="addParticipant">＋ Add participant</button></div><div id="participants">{% set names = meeting.participants.split('\n') if meeting and meeting.participants else [''] %}{% set companies = meeting.participant_company.split('\n') if meeting and meeting.participant_company else [''] %}{% for index in range(names|length) %}<div class="participant-row"><input name="participants" value="{{ names[index] }}" placeholder="Participant name" list="participantNames"><input name="participant_company" value="{{ companies[index] if index < companies|length else '' }}" placeholder="Company" list="participantCompanies"><button class="text-button remove-participant" type="button">Remove</button></div>{% endfor %}</div><datalist id="participantNames">{% for party in party_names %}<option value="{{ party }}">{% endfor %}</datalist><datalist id="participantCompanies">{% for party in party_companies %}<option value="{{ party }}">{% endfor %}</datalist></section>
+		<section class="meeting-section">
+			<h2>Meeting details</h2>
+			<div class="form-grid">
+				<label>Meeting title<input name="meeting_title" value="{{ meeting.meeting_title if meeting else '' }}" required placeholder="e.g. Weekly coordination meeting"></label>
+				<label>Meeting type<select name="meeting_type" required>{% for value in meeting_types %}<option value="{{ value }}" {% if meeting and meeting.meeting_type == value %}selected{% endif %}>{{ value }}</option>{% endfor %}</select></label>
+				<label>Meeting location<input name="location" value="{{ meeting.location if meeting else '' }}"></label>
+				<label>Meeting date<input name="meeting_date" type="date" value="{{ meeting.meeting_date.isoformat() if meeting and meeting.meeting_date else '' }}" required></label>
+				<label>Start time<input name="meeting_start_time" type="time" value="{{ meeting.meeting_start_time.strftime('%H:%M') if meeting and meeting.meeting_start_time else '' }}"></label>
+				<label>End time<input name="meeting_end_time" type="time" value="{{ meeting.meeting_end_time.strftime('%H:%M') if meeting and meeting.meeting_end_time else '' }}"></label>
+				<label>Host<input name="chairperson" value="{{ meeting.chairperson if meeting else '' }}" list="participantNames" placeholder="e.g. name or organisation..."></label>
+				<label>Prepared by<input value="{{ prepared_by }}" readonly></label>
+			</div>
+			<label>Agenda<textarea name="agenda" rows="3">{{ meeting.agenda if meeting else '' }}</textarea></label>
+			<label>Meeting description<textarea name="meeting_description" rows="3">{{ meeting.meeting_description if meeting else '' }}</textarea></label>
+		</section>
+		<section class="meeting-section">
+			<div class="section-heading"><h2>Action Items</h2><button class="secondary-button" type="button" id="addSection">＋ Add section</button></div>
+			<div id="meetingSections" data-section-count="{{ meeting.sections|length if meeting else 0 }}">
+				{% if meeting %}
+				{% set task_numbering = namespace(value=1) %}
+				{% for section in meeting.sections %}
+				{% set section_index = loop.index0 %}
+				<div class="meeting-section-editor" data-section-index="{{ section_index }}">
+					<input type="hidden" name="section_index" value="{{ section_index }}">
+					<div class="section-editor-head"><input name="section_date" type="date" value="{{ section.section_date.isoformat() }}" required><input name="section_title" value="{{ section.section_title }}" required placeholder="Section title"><button class="text-button remove-section" type="button">Remove</button></div>
+					<div class="task-columns" aria-hidden="true"><span>No.</span><span>Action / Key Item</span><span>Description</span><span>Assigned_To</span><span>Due Date</span><span>Progress</span><span>Priority</span><span>Remarks</span><span></span></div>
+					<div class="task-rows">
+						{% for task in section.tasks|sort(attribute='task_id') %}
+						{% set task_status_value = 'Pending' if task.task_Status in ['Incomplete', 'In Progress'] else 'Closed' if task.task_Status == 'Cancelled' else task.task_Status %}
+						<div class="task-row" data-task-id="{{ task.task_id }}">
+							<span class="task-number">{{ task_numbering.value }}</span>
+							{% set task_numbering.value = task_numbering.value + 1 %}
+							<textarea name="task_title_{{ section_index }}" rows="2" required placeholder="Task title">{{ task.task_title }}</textarea>
+							<textarea name="task_description_{{ section_index }}" rows="2" placeholder="Task description">{{ task.task_description or '' }}</textarea>
+							<textarea name="task_assigned_to_{{ section_index }}" rows="2" placeholder="Assigned to (add multiple names)" spellcheck="false">{{ task.task_assigned_to or '' }}</textarea>
+							<input name="task_due_date_{{ section_index }}" type="date" value="{{ task.task_due_date.isoformat() if task.task_due_date else '' }}">
+							<select name="task_status_{{ section_index }}" class="task-status status-{{ (task_status_value or 'Open')|lower|replace(' ', '-') }}">
+								{% for value in task_statuses %}<option value="{{ value }}" {% if task_status_value == value %}selected{% endif %}>{{ 'For Info' if value == 'FYI' else value }}</option>{% endfor %}
+							</select>
+							<select name="task_priority_{{ section_index }}" class="task-priority{% if task.task_priority and task.task_priority != 'None' %} priority-{{ task.task_priority|lower }}{% endif %}">
+								{% for value in task_priorities %}<option value="{{ value }}" {% if (task.task_priority or 'None') == value %}selected{% endif %}>{{ value }}</option>{% endfor %}
+							</select>
+							<textarea name="task_notes_{{ section_index }}" rows="2" placeholder="Remarks">{{ task.task_notes or '' }}</textarea>
+							<button class="text-button remove-task" type="button">Remove</button>
+						</div>
+						{% endfor %}
+					</div>
+					<button class="text-button add-task" type="button">＋ Add row</button>
+				</div>
+				{% endfor %}
+				{% endif %}
+			</div>
+		</section>
+		<div class="modal-actions"><a class="secondary-button" href="{{ url_for('views.home') }}">Cancel</a><button class="primary-button" type="submit">{{ 'Create meeting' if is_new else 'Save' }}</button></div>
+	</form>
+</main>
+{% endblock %}
