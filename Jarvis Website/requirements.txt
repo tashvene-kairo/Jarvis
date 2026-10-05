@@ -13,3 +13,4 @@ duckduckgo-search
 ddgs
 langchain-community
 wikipedia
+gunicorn
