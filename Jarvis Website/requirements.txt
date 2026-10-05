@@ -2,6 +2,7 @@ Flask
 Flask-Login
 Flask-SQLAlchemy
 psycopg2-binary
+psycopg
 reportlab
 python-dotenv
 pydantic
