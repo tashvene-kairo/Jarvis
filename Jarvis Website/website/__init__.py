@@ -2,6 +2,8 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import inspect, text
 from os import path
+import os
+from dotenv import load_dotenv
 import psycopg2
 from datetime import datetime
 
@@ -160,14 +162,12 @@ def migrate_meeting_task_priority_none():
 
 # DB_NAME = "database.db"
 
-
+load_dotenv()
 def create_app():
     app = Flask(__name__)
-    app.config['SECRET_KEY'] = 'tashkairotechnologydeveloper'
+    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
     # app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{DB_NAME}'
-    app.config['SQLALCHEMY_DATABASE_URI'] = (
-        'postgresql://postgres:jarviskairo123@127.0.0.1:5432/Jarvisdb'
-    ) 
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 
     db.init_app(app)
 
