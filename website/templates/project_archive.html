@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Project archive{% endblock %}
+{% block content %}
+<main class="project-archive-page">
+  <a class="text-button" href="/?view=projects">← Back to Projects</a>
+  <span class="eyebrow"></span>
+  <h1>Project archive</h1>
+  <p class="project-detail-intro">Past projects are kept for reference. Deleted projects can be restored within 30 days before permanent removal.</p>
+
+  <h2>Recently deleted</h2>
+  <div class="project-archive-section">
+    {% for project, days_remaining in recently_deleted %}
+    <article class="project-archive-card">
+      <div class="project-archive-card-head">
+        <div>
+          <small class="project-id">{{ project_display_id(project) }}</small>
+          <h3>{{ project.project_name }}</h3>
+          <p>{{ project.company.company_name if project.company else '' }}</p>
+        </div>
+        <span class="project-archive-meta">{{ days_remaining }} day{{ '' if days_remaining == 1 else 's' }} remaining</span>
+      </div>
+      <p class="project-archive-meta">Status: {{ project.Project_Status }} · Deleted {{ project.deleted_at.strftime('%d %b %Y') }}</p>
+      <details class="project-archive-detail">
+        <summary>Project details</summary>
+        <dl>
+          <div><dt>Project ID</dt><dd>{{ project_display_id(project) }}</dd></div>
+          <div><dt>Client</dt><dd>{{ project.client.client_name if project.client else 'Not set' }}</dd></div>
+          <div><dt>Sub Contractor / Vendor</dt><dd>{{ project.contractors|map(attribute='contractor_name')|join(', ') if project.contractors else (project.contractor.contractor_name if project.contractor else 'Not set') }}</dd></div>
+          <div><dt>Consultant</dt><dd>{{ project.consultant.consultant_name if project.consultant else 'Not set' }}</dd></div>
+          <div><dt>Site / Location</dt><dd>{{ project.project_site or 'Not set' }}</dd></div>
+          <div><dt>Description</dt><dd>{{ project.description or 'Not set' }}</dd></div>
+        </dl>
+      </details>
+      <div class="project-archive-actions">
+        <form method="post" action="{{ url_for('views.restore_project', project_id=project.project_id) }}">
+          <button class="secondary-button" type="submit">Restore project</button>
+        </form>
+        <form method="post" action="{{ url_for('views.delete_project_permanently', project_id=project.project_id) }}" data-confirm="Permanently delete {{ project.project_name }}? This cannot be undone.">
+          <button class="secondary-button" type="submit">Delete permanently</button>
+        </form>
+      </div>
+    </article>
+    {% else %}
+    <p class="project-archive-empty">There are no recently deleted projects.</p>
+    {% endfor %}
+  </div>
+
+  <h2>Past projects</h2>
+  <div class="project-archive-section">
+    {% for project in past_projects %}
+    <article class="project-archive-card">
+      <div class="project-archive-card-head">
+        <div>
+          <small class="project-id">{{ project_display_id(project) }}</small>
+          <h3>{{ project.project_name }}</h3>
+          <p>{{ project.company.company_name if project.company else '' }}</p>
+        </div>
+        <span class="status-pill blue">{{ project.Project_Status }}</span>
+      </div>
+      <details class="project-archive-detail">
+        <summary>Project details · {{ project.meetings|length }} meeting{{ '' if project.meetings|length == 1 else 's' }}</summary>
+        <dl>
+          <div><dt>Project ID</dt><dd>{{ project_display_id(project) }}</dd></div>
+          <div><dt>Client</dt><dd>{{ project.client.client_name if project.client else 'Not set' }}</dd></div>
+          <div><dt>Sub Contractor / Vendor</dt><dd>{{ project.contractors|map(attribute='contractor_name')|join(', ') if project.contractors else (project.contractor.contractor_name if project.contractor else 'Not set') }}</dd></div>
+          <div><dt>Consultant</dt><dd>{{ project.consultant.consultant_name if project.consultant else 'Not set' }}</dd></div>
+          <div><dt>Site / Location</dt><dd>{{ project.project_site or 'Not set' }}</dd></div>
+          <div><dt>Description</dt><dd>{{ project.description or 'Not set' }}</dd></div>
+          <div><dt>Purchase order date</dt><dd>{{ project.PurchaseOrder_date.strftime('%d %b %Y') if project.PurchaseOrder_date else 'Not set' }}</dd></div>
+          <div><dt>Created</dt><dd>{{ project.Issued_Date.strftime('%d %b %Y') if project.Issued_Date else 'Not set' }}</dd></div>
+        </dl>
+      </details>
+      <div class="project-archive-actions">
+        <a class="secondary-button" href="{{ url_for('views.project_details', project_name=project.project_name) }}">View project</a>
+      </div>
+    </article>
+    {% else %}
+    <p class="project-archive-empty">There are no completed, deferred, or cancelled projects.</p>
+    {% endfor %}
+  </div>
+</main>
+{% endblock %}

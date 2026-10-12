@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Meeting archive{% endblock %}
+{% block content %}
+<main class="project-archive-page">
+  <a class="text-button" href="/?view=meetings">← Back to Meetings</a>
+  <h1>Meeting archive</h1>
+  <p class="project-detail-intro">Past-project meetings are kept for reference. Deleted revisions can be restored within 30 days before permanent removal.</p>
+
+  <h2>Recently deleted</h2>
+  <div class="project-archive-section">
+    {% for entry, days_remaining in recently_deleted %}
+    <article class="project-archive-card">
+      <div class="project-archive-card-head">
+        <div>
+          <small class="project-id">{{ project_display_id(entry.project) }} · MOM{{ '%04d'|format(entry.meeting_id) }} · Rev_{{ entry.revision_No }}</small>
+          <h3>{{ entry.meeting.meeting_title }}</h3>
+          <p>{{ entry.project.project_name }} · {{ entry.project.company.company_name if entry.project.company else '' }}</p>
+        </div>
+        <span class="project-archive-meta">{{ days_remaining }} day{{ '' if days_remaining == 1 else 's' }} remaining</span>
+      </div>
+      <p class="project-archive-meta">
+        Meeting date: {{ entry.meeting.meeting_date.strftime('%d %b %Y') if entry.meeting.meeting_date else 'Not set' }}
+        · Deleted {{ entry.deleted_at.strftime('%d %b %Y') }}
+        {% if entry.deleted_with_project %}· Included with deleted project{% endif %}
+      </p>
+      <details class="meeting-archive-detail">
+        <summary>Revision details · {{ entry.meeting.sections|length }} section{{ '' if entry.meeting.sections|length == 1 else 's' }}</summary>
+        <dl>
+          <div><dt>Meeting ID</dt><dd>MOM{{ '%04d'|format(entry.meeting_id) }}</dd></div>
+          <div><dt>Revision</dt><dd>Rev_{{ entry.revision_No }}</dd></div>
+          <div><dt>Project</dt><dd>{{ entry.project.project_name }} ({{ project_display_id(entry.project) }})</dd></div>
+          <div><dt>Meeting date</dt><dd>{{ entry.meeting.meeting_date.strftime('%d %b %Y') if entry.meeting.meeting_date else 'Not set' }}</dd></div>
+          <div><dt>Meeting location</dt><dd>{{ entry.meeting.location or 'Not set' }}</dd></div>
+          <div><dt>Host</dt><dd>{{ entry.meeting.chairperson or 'Not set' }}</dd></div>
+          <div><dt>Agenda</dt><dd>{{ entry.meeting.agenda or 'Not set' }}</dd></div>
+          <div><dt>Meeting description</dt><dd>{{ entry.meeting.meeting_description or 'Not set' }}</dd></div>
+          <div><dt>Participants</dt><dd>{{ entry.meeting.participants.replace('\n', ', ') if entry.meeting.participants else 'Not set' }}</dd></div>
+        </dl>
+        {% for section in entry.meeting.sections %}
+        <h4 class="meeting-archive-section-title">{{ section.section_date.strftime('%d %b %Y') if section.section_date else '' }} · {{ section.section_title }}</h4>
+        {% if section.tasks %}
+        <div class="meeting-archive-task-list">
+          {% for task in section.tasks %}
+          <div class="meeting-archive-task">
+            <strong>{{ loop.index }}. {{ task.task_title }}</strong>
+            {% if task.task_description %}<p>{{ task.task_description }}</p>{% endif %}
+            <small>Assigned to: {{ task.task_assigned_to or 'Not set' }} · Due: {{ task.task_due_date.strftime('%d %b %Y') if task.task_due_date else 'Not set' }} · Progress: {{ 'For Info' if task.task_Status == 'FYI' else task.task_Status }} · Priority: {{ '' if task.task_priority == 'None' else task.task_priority }}</small>
+            {% if task.task_notes %}<small>Remarks: {{ task.task_notes }}</small>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="project-archive-meta">No action items in this section.</p>
+        {% endif %}
+        {% endfor %}
+      </details>
+      <div class="project-archive-actions">
+        {% if entry.deleted_with_project and entry.project.deleted_at %}
+        <a class="secondary-button" href="{{ url_for('views.project_archive') }}">Restore project first</a>
+        {% else %}
+        <form method="post" action="{{ url_for('views.restore_meeting_revision', meeting_id=entry.meeting_id, revision_id=entry.revision_id) }}">
+          <button class="secondary-button" type="submit">Restore revision</button>
+        </form>
+        {% endif %}
+        <form method="post" action="{{ url_for('views.delete_meeting_revision_permanently', meeting_id=entry.meeting_id, revision_id=entry.revision_id) }}" data-confirm="Permanently delete Rev_{{ entry.revision_No }} of {{ entry.meeting.meeting_title }}? This cannot be undone.">
+          <button class="secondary-button" type="submit">Delete permanently</button>
+        </form>
+      </div>
+    </article>
+    {% else %}
+    <p class="project-archive-empty">There are no recently deleted meeting revisions.</p>
+    {% endfor %}
+  </div>
+
+  <h2>Past meetings</h2>
+  <div class="project-archive-section">
+    {% for meeting in past_meetings %}
+    <article class="project-archive-card">
+      <div class="project-archive-card-head">
+        <div>
+          <small class="project-id">{{ project_display_id(meeting.project) }} · MOM{{ '%04d'|format(meeting.meeting_id) }} · Rev_{{ meeting.revision_No or 0 }}</small>
+          <h3>{{ meeting.meeting_title }}</h3>
+          <p>{{ meeting.project.project_name }} · {{ meeting.project.company.company_name if meeting.project.company else '' }}</p>
+        </div>
+        <span class="status-pill blue">{{ meeting.project.Project_Status }}</span>
+      </div>
+      <p class="project-archive-meta">Meeting date: {{ meeting.meeting_date.strftime('%d %b %Y') if meeting.meeting_date else 'Not set' }}</p>
+      <details class="meeting-archive-detail">
+        <summary>Meeting details · {{ meeting.sections|length }} section{{ '' if meeting.sections|length == 1 else 's' }}</summary>
+        <dl>
+          <div><dt>Project</dt><dd>{{ meeting.project.project_name }} ({{ project_display_id(meeting.project) }})</dd></div>
+          <div><dt>Meeting date</dt><dd>{{ meeting.meeting_date.strftime('%d %b %Y') if meeting.meeting_date else 'Not set' }}</dd></div>
+          <div><dt>Meeting location</dt><dd>{{ meeting.location or 'Not set' }}</dd></div>
+          <div><dt>Host</dt><dd>{{ meeting.chairperson or 'Not set' }}</dd></div>
+          <div><dt>Agenda</dt><dd>{{ meeting.agenda or 'Not set' }}</dd></div>
+          <div><dt>Meeting description</dt><dd>{{ meeting.meeting_description or 'Not set' }}</dd></div>
+        </dl>
+        {% for section in meeting.sections %}
+        <h4 class="meeting-archive-section-title">{{ section.section_date.strftime('%d %b %Y') if section.section_date else '' }} · {{ section.section_title }}</h4>
+        {% for task in section.tasks %}
+        <div class="meeting-archive-task">
+          <strong>{{ loop.index }}. {{ task.task_title }}</strong>
+          {% if task.task_description %}<p>{{ task.task_description }}</p>{% endif %}
+          <small>Assigned to: {{ task.task_assigned_to or 'Not set' }} · Due: {{ task.task_due_date.strftime('%d %b %Y') if task.task_due_date else 'Not set' }} · Progress: {{ 'For Info' if task.task_Status == 'FYI' else task.task_Status }}</small>
+        </div>
+        {% else %}
+        <p class="project-archive-meta">No action items in this section.</p>
+        {% endfor %}
+        {% endfor %}
+      </details>
+      <div class="project-archive-actions">
+        <a class="secondary-button" href="{{ url_for('views.meeting_details', meeting_id=meeting.meeting_id) }}">View meeting</a>
+      </div>
+    </article>
+    {% else %}
+    <p class="project-archive-empty">There are no meetings for past projects.</p>
+    {% endfor %}
+  </div>
+</main>
+{% endblock %}

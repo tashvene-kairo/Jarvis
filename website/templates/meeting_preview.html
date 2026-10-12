@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{{ meeting.meeting_title }}{% endblock %}
+{% block content %}
+<main class="meeting-page meeting-preview-page">
+  <div class="meeting-preview-topbar">
+    <a class="text-button" href="{{ url_for('views.home') }}">← Back</a>
+    <div class="meeting-preview-actions">
+      <a class="secondary-button" href="{{ url_for('views.edit_meeting', meeting_id=meeting.meeting_id) }}">Edit Meeting</a>
+      <a class="secondary-button" href="{{ url_for('views.export_meeting_pdf', meeting_id=meeting.meeting_id) }}">PDF</a>
+    </div>
+  </div>
+  <header class="meeting-preview-heading">
+    <div>
+      <span class="eyebrow">{{ meeting.project.project_name if meeting.project else 'Project meeting' }}</span>
+      <h1>{{ meeting.meeting_title }}</h1>
+      <p>MOM{{ '%04d'|format(meeting.meeting_id) }} · Rev_{{ meeting.revision_No or 0 }}</p>
+    </div>
+    <div class="meeting-preview-dates">
+      <span><strong>Issued</strong>{{ meeting.date_Issued.strftime('%d %b %Y, %H:%M') if meeting.date_Issued else 'Not recorded' }}</span>
+      <span><strong>Last revision</strong>{{ meeting.rev_Date.strftime('%d %b %Y, %H:%M') if meeting.rev_Date else 'No revision date' }}</span>
+    </div>
+  </header>
+  <section class="meeting-pdf-frame" aria-label="Read-only meeting minutes PDF preview">
+    <iframe src="{{ url_for('views.export_meeting_pdf', meeting_id=meeting.meeting_id, inline=1) }}" title="{{ meeting.meeting_title }} PDF preview"></iframe>
+  </section>
+</main>
+{% endblock %}

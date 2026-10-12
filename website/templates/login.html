@@ -1,0 +1,100 @@
+{% extends "base.html" %} {% block title %}Login{% endblock %}
+{% block content %}
+<main class="auth-page">
+  <div class="auth-brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span><strong>JARVIS</strong><small>Project intelligence</small></span></div>
+  <form method="POST" class="auth-form">
+  <h3>Login</h3>
+  <div class="form-group">
+    <label for="email">Email Address</label>
+    <input
+      type="email"
+      class="form-control"
+      id="email"
+      name="email"
+      placeholder="Enter email"
+      autocomplete="username"
+      required
+    />
+  </div>
+  <div class="form-group">
+    <label for="companyRegNo">Company Registration Number</label>
+    <input
+      type="text"
+      class="form-control"
+      id="companyRegNo"
+      placeholder=""
+      readonly
+    />
+  </div>
+  <div class="form-group">
+    <label for="companyName">Company Name</label>
+    <input
+      type="text"
+      class="form-control"
+      id="companyName"
+      placeholder=""
+      readonly
+    />
+  </div>
+  <div class="form-group">
+    <label for="companyPassword">Company Code</label>
+    <input
+      type="password"
+      class="form-control"
+      id="companyPassword"
+      name="companyPassword"
+      placeholder="Enter company code"
+      required
+    />
+  </div>
+  <div class="form-group">
+    <label for="password">Password</label>
+    <input
+      type="password"
+      class="form-control"
+      id="password"
+      name="password"
+      placeholder="Enter password"
+      autocomplete="current-password"
+      required
+    />
+  </div>
+  <br />
+  <button type="submit" class="btn btn-primary">Login</button>
+</form>
+  <p class="auth-switch">Haven't registered yet? <a href="/signup">Sign Up</a></p>
+  <p class="auth-switch"><a href="/forgot-password">Forgot password?</a></p>
+</main>
+<script>
+  const emailInput = document.getElementById('email');
+  const companyRegNoInput = document.getElementById('companyRegNo');
+  const companyNameInput = document.getElementById('companyName');
+  let lookupRequest = 0;
+
+  async function fillCompanyName() {
+    const email = emailInput.value.trim();
+    const requestId = ++lookupRequest;
+    if (!email || !emailInput.checkValidity()) {
+      companyRegNoInput.value = '';
+      companyNameInput.value = '';
+      return;
+    }
+
+    try {
+      const response = await fetch(`/company-lookup?email=${encodeURIComponent(email)}`);
+      if (!response.ok) return;
+      const data = await response.json();
+      if (requestId !== lookupRequest) return;
+      companyRegNoInput.value = data.company_reg_no || '';
+      companyNameInput.value = data.company_name || '';
+    } catch {
+      if (requestId === lookupRequest) {
+        companyRegNoInput.value = '';
+        companyNameInput.value = '';
+      }
+    }
+  }
+
+  emailInput.addEventListener('input', fillCompanyName);
+</script>
+{% endblock %}
